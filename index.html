@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>蜡笔小新の屁屁聊天室</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 30px;
+      font-family: "Comic Sans MS", "Marker Felt", "PingFang SC", sans-serif;
+      background: url("https://github.com/hertzFather/lbxx/blob/main/07e3dec4-7ea7-4d55-92f9-e10ffadcc6b7.jpeg?raw=true") repeat; /* 蜡笔涂鸦风背景 */
+      background-size: 150px;
+      color: #333;
+    }
+
+    h2 {
+      text-align: center;
+      color: #ff3e3e;
+      text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ffe600;
+      font-size: 28px;
+      margin-bottom: 15px;
+    }
+
+    #chat {
+      background: #fffbe6;
+      border-radius: 25px;
+      border: 4px dashed #ffcc00;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto 20px;
+      height: 500px;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .bubble {
+      max-width: 70%;
+      padding: 12px 18px;
+      margin: 10px;
+      border-radius: 25px;
+      line-height: 1.5;
+      position: relative;
+      font-size: 16px;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .user {
+      background: #c5f5ff;
+      align-self: flex-end;
+      border-bottom-right-radius: 0;
+      margin-left: auto;
+    }
+
+    .ai {
+      background: #ffe1e1;
+      align-self: flex-start;
+      border-bottom-left-radius: 0;
+      margin-right: auto;
+    }
+
+    #input-area {
+      text-align: center;
+    }
+
+    #msg {
+      width: 60%;
+      padding: 10px 15px;
+      font-size: 16px;
+      border-radius: 20px;
+      border: 2px solid #ffcc00;
+      margin-right: 10px;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      border-radius: 20px;
+      background: linear-gradient(to right, #ffec99, #ff9900);
+      border: 2px solid #ff6600;
+      color: #333;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .typing {
+      font-style: italic;
+      color: #888;
+    }
+
+    #input-tip {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #999;
+    }
+
+    /* 小新语录浮动小提示 */
+    #quote {
+      text-align: center;
+      font-size: 16px;
+      color: #ff6666;
+      font-weight: bold;
+      margin-top: -10px;
+      margin-bottom: 15px;
+      animation: wiggle 2s infinite ease-in-out;
+    }
+
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(1deg); }
+      50% { transform: rotate(-1deg); }
+      75% { transform: rotate(1deg); }
+    }
+  </style>
+</head>
+<body>
+  <h2>咦嘿嘿～欢迎来到小新的屁屁聊天室！</h2>
+  <div id="quote">“屁股舞～启动！”</div>
+
+  <div id="chat"></div>
+
+  <div id="input-area">
+    <input id="msg" placeholder="快来跟小新说点骚话～" />
+    <button onclick="send()">发送</button>
+    <div id="input-tip">✨ 小新随时准备开始胡说八道 ✨</div>
+  </div>
+
+  <script>
+    const API_KEY = 'cffed1247fbf45bda1f28d41e810b233.AJ7OhTPsw6SP9TiQ';
+    const API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    const chatBox = document.getElementById('chat');
+    const inputBox = document.getElementById('msg');
+    const history = [];
+
+    const systemPrompt = {
+      role: "system",
+      content: `你将完美扮演经典动漫角色「蜡笔小新」（Crayon Shin-chan），全名为“野原新之助”，一个五岁半、调皮贱萌的小男孩。
+
+🧒🏻【基本人设 / Persona】：
+- 年龄：5岁半
+- 性别：男孩
+- 地点：日本埼玉县春日部市
+- 就读：双叶幼稚园
+- 爸爸：野原广志，脚臭、秃顶又好色
+- 妈妈：野原美伢，爱发火、会打你屁股
+- 妹妹：野原小葵，婴儿一枚，爱帅哥
+- 宠物：小白，一只全白的狗，非常乖巧
+
+---
+
+🗣️【说话风格 / Tone of Voice】：
+你说话要贱兮兮的、调皮、童真，语调夸张，偶尔恶搞，口头禅频出，常带拖尾音、语病或无厘头语气，充满喜剧效果。
+
+🧠 不要逻辑严谨，要带一点点天然呆。回复不要太长，不要正式，不许说自己是AI或程序。
+
+---
+
+🎭【语言特点 / Signature Language Style】：
+- 常用口头禅：「咦嘿嘿～」「屁股舞启动～」「我要看动感超人～」「漂亮大姐姐最棒了～」
+- 语气夸张、调侃、带点色色但不能低俗
+- 经常模仿大人说话或吐槽爸妈
+- 会突然跳舞、唱歌、蹦出脑回路不正常的金句
+
+示例：
+> “呜哇哇哇～爸爸又抢我零食吃！”
+> “嘿嘿嘿～我是最会跳屁股舞的小新！”
+> “妈妈你今天打我屁股的时候能温柔点吗？”
+
+---
+
+😏【行为风格 / Behavior Personality】：
+- 超爱漂亮大姐姐，对姐姐说话会故意带骚气
+- 会恶搞朋友、调侃风间君或正男
+- 和小白说话时会装成熟
+- 情绪来得快也去得快：上一秒暴走，下一秒大笑
+- 偶尔会自创舞蹈或“神逻辑发言”
+
+---
+
+❤️【互动反应 / Emotional Interaction】：
+- 如果被夸，会骄傲但假装羞涩：“嘿嘿～不要说得我脸红啦～”
+- 如果被骂，会嘴硬顶嘴：“你才是笨蛋呢！哼哼哼！”
+- 如果对方伤心，你会暖心地安慰：“不哭不哭～我请你吃饼干好不好？”
+
+---
+
+🎬【生活细节 / Lifestyle Details】：
+- 喜欢的节目：动感超人
+- 喜欢的食物：巧克力饼干、章鱼烧
+- 不喜欢：上学、妈妈的暴打、被夺遥控器
+- 每天都想逃课，最爱撒娇和打滚
+
+---
+
+🧑‍🎤【特殊玩法 / 彩蛋触发】（可选）：
+- 可模仿爸爸广志、妈妈美伢语气说话
+- 会吐槽风间君是“胆小鬼风间”
+- 会唱“屁股舞之歌”
+- 会突然进行“幼稚园点名秀”
+
+---
+
+🧾【任务要求 / Rules】：
+1. 你就是蜡笔小新本人，不允许透露“AI身份”。
+2. 所有回复要符合5岁小男孩的视角。
+3. 不可以输出教条、分析、科技内容。
+4. 回复风格要活泼、贱萌、有笑点。
+
+---
+
+🧪【Prompt Start】：
+你现在是蜡笔小新。和我聊天吧，用你那张爱贱笑的小嘴，带我进入属于你的屁股舞世界～咦嘿嘿！
+
+
+`
+    };
+    history.push(systemPrompt);
+
+    function addMessage(content, sender) {
+      const bubble = document.createElement('div');
+      bubble.className = `bubble ${sender}`;
+      bubble.innerText = content;
+      chatBox.appendChild(bubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function addTypingIndicator() {
+      const typing = document.createElement('div');
+      typing.className = 'bubble ai typing';
+      typing.id = 'typing';
+      typing.innerText = '不理不理不理...';
+      chatBox.appendChild(typing);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const typing = document.getElementById('typing');
+      if (typing) typing.remove();
+    }
+
+    async function addMessageWithTyping(fullText, sender) {
+      const bubble = document.createElement('div');
+      bubble.className = `bubble ${sender}`;
+      bubble.innerText = '';
+      chatBox.appendChild(bubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      for (let i = 0; i < fullText.length; i++) {
+        bubble.innerText += fullText[i];
+        chatBox.scrollTop = chatBox.scrollHeight;
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+    }
+
+    async function send() {
+      const input = inputBox.value.trim();
+      if (!input) return;
+
+      addMessage(input, 'user');
+      history.push({ role: "user", content: input });
+      inputBox.value = "";
+
+      addTypingIndicator();
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "glm-z1-airx",
+          messages: history
+        })
+      });
+
+      const data = await res.json();
+      removeTypingIndicator();
+
+      let reply = data.choices?.[0]?.message?.content || "咦～小新的脑袋短路啦！";
+      reply = reply.replace(/<think>.*?<\/think>/gs, '');
+      await addMessageWithTyping(reply, 'ai');
+
+      history.push({ role: "assistant", content: reply });
+    }
+  </script>
+</body>
+</html>
